@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Python version
         run: python3 -V
@@ -55,4 +55,5 @@ jobs:
             tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
 
