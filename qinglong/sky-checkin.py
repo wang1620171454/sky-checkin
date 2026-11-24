@@ -30,6 +30,21 @@ ALT_IP = "111.223.13.41"          # 备用直连 IP，可用环境变量 SKY_ALT
 UA = ("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36")
 TIMEOUT = 20
+PROXY = (os.getenv("SKY_PROXY") or "").strip()   # 可选：http://user:pass@host:port
+
+_OPENER = None
+
+
+def opener():
+    """有代理就走代理。站点对境外 IP 直接 502（实测 GitHub runner 全站 502），
+    所以境外机器必须借国内出口。"""
+    global _OPENER
+    if _OPENER is None:
+        handlers = []
+        if PROXY:
+            handlers.append(urllib.request.ProxyHandler({"http": PROXY, "https": PROXY}))
+        _OPENER = urllib.request.build_opener(*handlers)
+    return _OPENER
 
 
 def log(msg):
@@ -67,7 +82,7 @@ def request(path, *, method="GET", payload=None, cookie=None, via_ip=False):
 
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
-        with urllib.request.urlopen(req, timeout=TIMEOUT, context=_ctx(verify)) as r:
+        with opener().open(req, timeout=TIMEOUT) as r:
             return r.status, r.headers, r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         body = ""
