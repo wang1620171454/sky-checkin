@@ -1,0 +1,49 @@
+name: Sky Check-in
+
+# 触发：每天北京时间 08:10 跑一次；也可以手动点运行
+# 注意 cron 是 UTC。北京时间 = UTC+8，所以 00:10 UTC 对应 08:10 CST
+on:
+  schedule:
+    - cron: '10 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sky-checkin
+  cancel-in-progress: false
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python version
+        run: python3 -V
+
+      - name: Run check-in
+        shell: bash
+        env:
+          SKY_ACCOUNTS: ${{ secrets.SKY_ACCOUNTS }}
+          SKY_ALT_IP: ${{ vars.SKY_ALT_IP }}
+          SKY_WEBHOOK: ${{ secrets.SKY_WEBHOOK }}
+          PYTHONIOENCODING: utf-8
+        run: |
+          set -o pipefail
+          python3 qinglong/sky-checkin.py 2>&1 | tee run.log
+
+      - name: Job summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo '### Sky 签到结果'
+            echo ''
+            echo '```'
+            tail -n 40 run.log 2>/dev/null || echo '(没有日志)'
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
