@@ -40,7 +40,7 @@ jobs:
         shell: bash
         env:
           SKY_ACCOUNTS: ${{ secrets.SKY_ACCOUNTS }}
-          SKY_ALT_IP: ${{ vars.SKY_ALT_IP }}
+          SKY_ALT_IP: ${{ vars.SKY_ALT_IP }}`n          SKY_PROXY: ${{ secrets.SKY_PROXY }}
           SKY_WEBHOOK: ${{ secrets.SKY_WEBHOOK }}
           PYTHONIOENCODING: utf-8
         run: |
@@ -73,6 +73,7 @@ jobs:
             tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
 
 
 
