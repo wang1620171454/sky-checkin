@@ -25,6 +25,17 @@ jobs:
       - name: Python version
         run: python3 -V
 
+      - name: Diagnose egress
+        if: always()
+        shell: bash
+        run: |
+          ipjson="$(curl -sS --max-time 12 https://ipinfo.io/json 2>/dev/null | tr -d '\n ' | cut -c1-160)"
+          root="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 https://sky.skyxing.cn/ 2>/dev/null || echo ERR)"
+          api="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 -X POST -H 'Content-Type: application/json' -d '{"username":"x","password":"y"}' https://sky.skyxing.cn/api/auth/login 2>/dev/null || echo ERR)"
+          echo "egress=$ipjson" | tee diag.txt
+          echo "root=$root login_api=$api" | tee -a diag.txt
+          echo "::notice title=出口诊断::$(tr '\n' ' ' < diag.txt)"
+
       - name: Run check-in
         shell: bash
         env:
@@ -62,6 +73,7 @@ jobs:
             tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
 
 
 
