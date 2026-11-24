@@ -1,7 +1,6 @@
-﻿name: Sky Check-in
+name: Sky Check-in
 
-# 瑙﹀彂锛氭瘡澶╁寳浜椂闂?08:10 璺戜竴娆★紱涔熷彲浠ユ墜鍔ㄧ偣杩愯
-# 娉ㄦ剰 cron 鏄?UTC銆傚寳浜椂闂?= UTC+8锛屾墍浠?00:10 UTC 瀵瑰簲 08:10 CST
+# 每天北京时间 08:10 跑一次（cron 是 UTC，00:10 UTC = 08:10 CST）；也可手动触发
 on:
   schedule:
     - cron: '10 0 * * *'
@@ -25,6 +24,8 @@ jobs:
       - name: Python version
         run: python3 -V
 
+      # 站点对境外 IP 直接 502（实测 GitHub runner 全站 502），所以先量一下出口，
+      # 失败时能一眼看出是"被风控"还是"账号错了"
       - name: Diagnose egress
         if: always()
         shell: bash
@@ -40,7 +41,8 @@ jobs:
         shell: bash
         env:
           SKY_ACCOUNTS: ${{ secrets.SKY_ACCOUNTS }}
-          SKY_ALT_IP: ${{ vars.SKY_ALT_IP }}`n          SKY_PROXY: ${{ secrets.SKY_PROXY }}
+          SKY_ALT_IP: ${{ vars.SKY_ALT_IP }}
+          SKY_PROXY: ${{ secrets.SKY_PROXY }}
           SKY_WEBHOOK: ${{ secrets.SKY_WEBHOOK }}
           PYTHONIOENCODING: utf-8
         run: |
@@ -53,7 +55,6 @@ jobs:
         run: |
           msg="$(tail -n 3 run.log 2>/dev/null | tr '\n' ' ')"
           echo "::error title=Sky 签到失败::${msg:-没有日志}"
-          tail -n 40 run.log 2>/dev/null || true
 
       - name: Result notice
         if: always()
@@ -67,14 +68,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo '### Sky 绛惧埌缁撴灉'
+            echo '### Sky 签到结果'
             echo ''
             echo '```'
-            tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
+            cat diag.txt 2>/dev/null || true
+            echo '---'
+            tail -n 40 run.log 2>/dev/null || echo '(没有日志)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
-
-
-
-
-
