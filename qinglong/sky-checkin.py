@@ -22,6 +22,7 @@ import json
 import os
 import ssl
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -31,6 +32,8 @@ UA = ("Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/126.0.0.0 Mobile Safari/537.36")
 TIMEOUT = 20
 PROXY = (os.getenv("SKY_PROXY") or "").strip()   # 可选：http://user:pass@host:port
+RETRY = int(os.getenv("SKY_RETRY") or 3)         # 连接被重置时的重试次数
+GAP = float(os.getenv("SKY_GAP") or 6)           # 每次请求之间的间隔（秒）
 
 _OPENER = None
 
@@ -80,19 +83,28 @@ def request(path, *, method="GET", payload=None, cookie=None, via_ip=False):
     if via_ip:
         headers["Host"] = HOST
 
-    req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with opener().open(req, timeout=TIMEOUT) as r:
-            return r.status, r.headers, r.read().decode("utf-8", "replace")
-    except urllib.error.HTTPError as e:
-        body = ""
+    # 站点对突发请求会直接 RST（SSL EOF），所以连接层错误要退避重试。
+    # HTTP 4xx/5xx 不算连接错误，重试没意义，直接返回。
+    last = (0, {}, "no attempt")
+    for attempt in range(1, RETRY + 1):
+        req = urllib.request.Request(url, data=data, headers=headers, method=method)
         try:
-            body = e.read().decode("utf-8", "replace")
-        except Exception:
-            pass
-        return e.code, e.headers, body
-    except Exception as e:
-        return 0, {}, f"EXC {type(e).__name__}: {e}"
+            with opener().open(req, timeout=TIMEOUT) as r:
+                return r.status, r.headers, r.read().decode("utf-8", "replace")
+        except urllib.error.HTTPError as e:
+            body = ""
+            try:
+                body = e.read().decode("utf-8", "replace")
+            except Exception:
+                pass
+            return e.code, e.headers, body
+        except Exception as e:
+            last = (0, {}, f"EXC {type(e).__name__}: {e}")
+            if attempt < RETRY:
+                wait = min(15, 3 * attempt)
+                log(f"    连接被重置，{wait}s 后重试（{attempt}/{RETRY}）")
+                time.sleep(wait)
+    return last
 
 
 def login(user, pw):
@@ -202,7 +214,9 @@ def main():
     total_points = 0
     lines = []
 
-    for user, pw, name in accounts:
+    for idx, (user, pw, name) in enumerate(accounts):
+        if idx:
+            time.sleep(GAP)
         log(f"账号 {user} 开始")
         cookie, _st = login(user, pw)
         if not cookie:
