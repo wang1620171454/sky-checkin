@@ -44,6 +44,13 @@ jobs:
           echo "::error title=Sky 签到失败::${msg:-没有日志}"
           tail -n 40 run.log 2>/dev/null || true
 
+      - name: Result notice
+        if: always()
+        shell: bash
+        run: |
+          msg="$(tail -n 4 run.log 2>/dev/null | tr '\n' ' ')"
+          echo "::notice title=Sky 结果::${msg:-没有日志}"
+
       - name: Job summary
         if: always()
         shell: bash
@@ -55,5 +62,6 @@ jobs:
             tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
 
 
