@@ -1,7 +1,7 @@
-name: Sky Check-in
+﻿name: Sky Check-in
 
-# 触发：每天北京时间 08:10 跑一次；也可以手动点运行
-# 注意 cron 是 UTC。北京时间 = UTC+8，所以 00:10 UTC 对应 08:10 CST
+# 瑙﹀彂锛氭瘡澶╁寳浜椂闂?08:10 璺戜竴娆★紱涔熷彲浠ユ墜鍔ㄧ偣杩愯
+# 娉ㄦ剰 cron 鏄?UTC銆傚寳浜椂闂?= UTC+8锛屾墍浠?00:10 UTC 瀵瑰簲 08:10 CST
 on:
   schedule:
     - cron: '10 0 * * *'
@@ -36,14 +36,23 @@ jobs:
           set -o pipefail
           python3 qinglong/sky-checkin.py 2>&1 | tee run.log
 
+      - name: Failure annotation
+        if: failure()
+        shell: bash
+        run: |
+          msg="$(tail -n 3 run.log 2>/dev/null | tr '\n' ' ')"
+          echo "::error title=Sky 签到失败::${msg:-没有日志}"
+          tail -n 40 run.log 2>/dev/null || true
+
       - name: Job summary
         if: always()
         shell: bash
         run: |
           {
-            echo '### Sky 签到结果'
+            echo '### Sky 绛惧埌缁撴灉'
             echo ''
             echo '```'
-            tail -n 40 run.log 2>/dev/null || echo '(没有日志)'
+            tail -n 40 run.log 2>/dev/null || echo '(娌℃湁鏃ュ織)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
